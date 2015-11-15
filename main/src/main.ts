@@ -1,5 +1,3 @@
-/// <reference path="../../typings/tsd.d.ts" />
-
 import express = require('express');
 import {SharedConnectionRepository} from "./infr/Repository";
 import {UserRepository} from "./domain/user/UserRepository";

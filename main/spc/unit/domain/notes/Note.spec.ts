@@ -1,5 +1,3 @@
-/// <reference path="../../../../../typings/tsd.d.ts" />
-
 import {expect} from '../../../suite';
 import {Note, CreateNewNote, CreateNote} from '../../../../src/domain/notes/Note';
 
@@ -78,7 +76,7 @@ describe('Note', () => {
         const whenRenamingTo = (newName, cb) => (note) => cb(note.rename(newName));
         // endregion
         // region assertions
-        const thenItShouldBeNamed = (name) => (note) => expect(note.dto().title).to.equal(name);
+        const thenItShouldBeNamed = (name) => (note) => expect(note.dto()).to.contain({ title: name });
         // endregion
         it("should contain the new name", () => {
             givenSomeNote(

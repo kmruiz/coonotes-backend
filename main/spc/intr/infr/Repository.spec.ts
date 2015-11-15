@@ -1,9 +1,11 @@
 "use strict";
 
-import {expect} from '../../suite';
+import {expect, eventually} from '../../suite';
 import {SharedConnectionRepository} from '../../../src/infr/Repository';
 
 describe("Repository", () => {
+    const SlowTimeout = 10000;
+
     // region preconditions
     const givenAMongoConnection = (cb) => cb( SharedConnectionRepository.connect() );
     const givenAnInvalidMongoConnection = (cb) => cb( SharedConnectionRepository.connect('icannotconnecthere') );
@@ -18,9 +20,9 @@ describe("Repository", () => {
     };
     // endregion
 
-    afterEach((done) => {
-        SharedConnectionRepository.disconnect().then(done);
-    });
+    afterEach(eventually ( async () => {
+        await SharedConnectionRepository.disconnect();
+    }));
 
     describe("connection", () => {
         it("should connect to a single mongo at localhost", (done) => {
@@ -29,7 +31,9 @@ describe("Repository", () => {
             );
         });
 
-        it("should throw an error when connecting to an invalid mongodb", (done) => {
+
+        it("should throw an error when connecting to an invalid mongodb (slow)", function (done) {
+            this.timeout(SlowTimeout);
             givenAnInvalidMongoConnection(
                 thenItShouldThrowAnException(done)
             );

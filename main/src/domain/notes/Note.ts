@@ -1,7 +1,7 @@
-/// <reference path="../../../../typings/tsd.d.ts" />
 "use strict";
 
 import uuid = require('node-uuid');
+import {Entity} from '../../infr/Repository';
 
 export interface NoteCreator {
     createNote(title: string, body: string): Note
@@ -17,7 +17,8 @@ export interface Note {
     transfer(user: string): Note
 }
 
-class DefaultNote implements Note {
+@Entity
+export class DefaultNote implements Note {
     constructor(
         private id: string,
         private owner: string,

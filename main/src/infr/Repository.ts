@@ -1,8 +1,42 @@
-/// <reference path="../../../typings/tsd.d.ts" />
 "use strict";
 
 import {MongoClient, Db, Collection} from "mongodb";
 import * as Q from 'q';
+
+const STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg;
+const ARGUMENT_NAMES = /([^\s,]+)/g;
+function getParamNames(func) {
+    var fnStr = func.toString().replace(STRIP_COMMENTS, '');
+    var result = fnStr.slice(fnStr.indexOf('(')+1, fnStr.indexOf(')')).match(ARGUMENT_NAMES);
+    return result || [];
+}
+
+export function ValueObject(ofType: Function) {
+    return function (target: any, _: string, parameterIndex: number) {
+        const parameterName = getParamNames(target)[parameterIndex];
+        target.prototype._valueObjects = target.prototype._valueObjects || {};
+        target.prototype._valueObjects[parameterName] = ofType;
+    }
+
+}
+
+export function Entity(target: Function) {
+    const params = getParamNames(target);
+    function mapToExpected(param, value) {
+        if (target.prototype._valueObjects && target.prototype._valueObjects[param]) {
+            return target.prototype._valueObjects[param].prototype._constructorForMap(value);
+        }
+        return value;
+    }
+
+    target.prototype._constructorForMap = function (map) {
+        var args = params.map(p => {
+            return mapToExpected(p, map[p]);
+        });
+
+        return new (Function.prototype.bind.apply(target, [{}].concat(args)));
+    };
+}
 
 export abstract class Repository<T> {
     public abstract async drop(): Promise<void>;
@@ -44,5 +78,18 @@ export class SharedConnectionRepository<T> extends Repository<T> {
 
     protected collection(): Collection {
         return SharedConnectionRepository.sharedConnection.collection(this.collectionName);
+    }
+
+    public async save(object: T): Promise<T> {
+        const state = <any> object;
+        return await Q.ninvoke(this.collection(), 'updateOne', {id: state.id,}, state, {upsert: true}).then(() => object);
+    }
+
+    protected async findOneGeneric(entityClass: Function, query: any): Promise<T> {
+        return await Q.ninvoke(this.collection(), 'findOne', query).then(this.buildFromMap(entityClass));
+    }
+
+    protected buildFromMap(entityClass: Function): (map: any) => T {
+        return (map) => <T> entityClass.prototype._constructorForMap(map);
     }
 }
